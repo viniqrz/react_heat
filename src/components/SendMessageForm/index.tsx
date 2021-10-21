@@ -23,7 +23,7 @@ export function SendMessageForm() {
 
   return (
     <div className={styles.sendMessageFormWrapper}>
-      <button className={styles.signOutButton}>
+      <button onClick={signOut} className={styles.signOutButton}>
         <VscSignOut size="32" />
       </button>
 
