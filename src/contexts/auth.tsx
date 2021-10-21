@@ -17,11 +17,18 @@ type AuthResponse = {
 type AuthContextData = {
   user: User | null;
   signInUrl: string;
+  signOut: () => void;
 };
 
 type AuthProvider = {
   children: ReactNode;
 };
+
+type ProfileResponse = {
+  user: User;
+};
+
+const LOCAL_STORAGE_TOKEN_KEY = '@dowhile:token';
 
 export const AuthContext = createContext({} as AuthContextData);
 
@@ -38,28 +45,44 @@ export function AuthProvider({ children }: AuthProvider) {
 
     const { token, user: responseUser } = response.data;
 
-    localStorage.setItem('@dowhile:token', token);
-
-    console.log(response.data, githubCode);
+    localStorage.setItem(LOCAL_STORAGE_TOKEN_KEY, token);
 
     setUser(responseUser);
   }
+
+  function signOut() {
+    setUser(null);
+    localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+
+    if (token) {
+      api.defaults.headers.common.authorization = `Bearer ${token}`;
+
+      api.get<ProfileResponse>('profile').then(({ data }) => {
+        setUser(data.user);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const url = window.location.href;
     const hasGithubCode = url.includes('?code=');
 
     if (hasGithubCode) {
-      const [urlWithoutCode, code] = url.split('?code=');
+      const [, code] = url.split('?code=');
+      const [baseUrl] = url.split('signin');
 
       signIn(code);
 
-      window.history.pushState({}, '', urlWithoutCode);
+      window.history.pushState({}, '', baseUrl);
     }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, signInUrl }}>
+    <AuthContext.Provider value={{ user, signInUrl, signOut }}>
       {children}
     </AuthContext.Provider>
   );
